@@ -5,16 +5,16 @@ from setuptools import setup
 
 
 setup(
-    name="change_this_to_name_of_package",
-    version="0.1",
-    description="CREATE A DESCRIPTION",
-    url="https://github.com/CuriBio/CHANGE_THIS_TO_NAME_OF_REPO",
+    name="labware_domain_models",
+    version="0.2",
+    description="Business logic domain models for labware definitions and barcoded labware/microplates with SBS footprints.",
+    url="https://github.com/CuriBio/labware-domain-models",
     author="Curi Bio",
     author_email="contact@curibio.com",
     license="MIT",
     packages=find_packages("src"),
     package_dir={"": "src"},
-    install_requires=[],
+    install_requires=["domain_model>=0.3", "immutable_data_validation>=0.2.1"],
     zip_safe=False,
     include_package_data=True,
     classifiers=[

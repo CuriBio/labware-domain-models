@@ -1,4 +1,4 @@
-recursive-include change_this_to_name_of_package **
+recursive-include labware_domain_models **
 include LICENSE
 include *rst
 include *py

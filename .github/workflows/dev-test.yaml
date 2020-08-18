@@ -13,6 +13,7 @@ on:
   push:
     branches:
       - master
+      - development
   pull_request:
 
 jobs:
@@ -47,10 +48,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Display Python version
-        run: python -c "import sys; print(sys.version)"
-
-      - name: Create virtual python environment
-        run: python -m venv venv
+        run: |
+          python -c "import sys; print(sys.version)"
+          python -m venv venv
 
       - name: Activate virtual environment (Linux/MacOS)
         if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
@@ -59,34 +59,39 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: venv\Scripts\Activate.ps1
 
-
       - name: Display Pip Version and confirm environment empty
         run: |
           pip -V
           pip freeze
       - name: Install Dev Dependencies
         run: pip install -r requirements-dev.txt
+
       - name: Install Main Package
         run: pip install -e .
       - name: Log full installed packages
         run: pip freeze
-      - name: Install pre-commit hooks
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7
-        # only enable pre-commit on the fastest job
-        run: pre-commit install
 
       - name: Run pre-commit hooks
-        # only enable pre-commit on the fastest job
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7
-        run: pre-commit run -a
+        # only enable pre-commit on the fastest job
+        run: |
+          pre-commit install
+          pre-commit run -a
 
-      - name: Run Tests
-        run: pytest -xsvv --cov-report=xml
+      - name: Run Tests with randomly generated seed
+        if: github.event.inputs.randomlyseed == ''
+        run: pytest -xsvv --cov-report=xml --full-ci --include-slow-tests
+
+      - name: Run Tests with supplied pytest-randomly seed
+        if: github.event.inputs.randomlyseed != ''
+        run: pytest -xsvv --cov-report=xml --randomly-seed=${{ github.event.inputs.randomlyseed }} --full-ci --include-slow-tests
 
       - name: Confirm Sphinx Docs build correctly
         # only check Sphinx docs build on the fastest job
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7
-        run: SPHINXOPTS="-W" make --directory=docs html # the -W flag treats warnings as errors to cause build failures
+        run: |
+          pip install -r docs/requirements.txt
+          SPHINXOPTS="-W" make --directory=docs html # the -W flag treats warnings as errors to cause build failures
 
       - name: Upload coverage to Codecov
         # only upload coverage from fastest job
@@ -101,6 +106,6 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: true
 
-      - name: Run prerelease
+      - name: Run prerelease to check packaging compatibilty
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7
         run: python3 prerelease.py --no-input

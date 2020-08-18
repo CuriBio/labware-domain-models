@@ -5,7 +5,7 @@ Transform: "AWS::Serverless-2016-10-31"
 
 # Note (Eli 5/3/30): you must connect your AWS account to your github account using OAuth manually before this will work (one-time). To do so, just attempt to create a CodeBuild project through the console--you don't need to finish creating it, just get to the point where you've created the OAuth connection.
 
-# to create: aws cloudformation deploy --stack-name=codebuild-CHANGE_THIS_TO_NAME_OF_PACKAGE-publish-to-pypi --template-file=codebuild_formation.yaml --capabilities CAPABILITY_NAMED_IAM
+# to create: aws cloudformation deploy --stack-name=codebuild-labware-domain-models-publish-to-pypi --template-file=codebuild-formation.yaml --capabilities CAPABILITY_NAMED_IAM
 
 Description: Use CodeBuild to publish Github repos to PyPi using company PyPi credentials
 
@@ -75,7 +75,7 @@ Resources:
         GitCloneDepth: 1
 
         ReportBuildStatus: True
-        Location: "https://github.com/CuriBio/CHANGE_THIS_TO_NAME_OF_PACKAGE/"
+        Location: "https://github.com/CuriBio/labware-domain-models/"
         Type: GITHUB
 
       QueuedTimeoutInMinutes: 10
