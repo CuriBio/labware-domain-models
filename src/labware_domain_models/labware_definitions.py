@@ -16,6 +16,7 @@ from immutable_data_validation import validate_int
 from immutable_data_validation import validate_str
 
 from .exceptions import CartesianVectorRequirePlateHeightError
+from .exceptions import PositionInvalidForLabwareDefinitionError
 from .exceptions import WellCoordinatesRequireA1CenterError
 from .exceptions import WellCoordinatesRequireColumnOffsetError
 from .exceptions import WellCoordinatesRequireRowOffsetError
@@ -39,21 +40,6 @@ class CartesianVector(NamedTuple):
 class WellCoordinate(NamedTuple):
     x: Union[float, int]  # pylint: disable=invalid-name
     y: Union[float, int]  # pylint: disable=invalid-name
-
-
-class PositionInvalidForLabwareDefinitionError(Exception):
-    """Positions must be within the rows and columns defined for a labware."""
-
-    def __init__(
-        self,
-        checked_row: int,
-        checked_column: int,
-        labware_definition: "LabwareDefinition",
-    ) -> None:
-        super().__init__()
-        self.checked_column = checked_column
-        self.checked_row = checked_row
-        self.labware_definition = labware_definition
 
 
 def get_row_and_column_from_well_name(well_name: str) -> Tuple[int, int]:
@@ -122,8 +108,10 @@ class LabwareDefinition(DomainModelWithUuid):
     def validate_position(self, test_row: int, test_column: int) -> None:
         """Validate if this row and column exist in this definition."""
         self.validate_row_and_column_counts()  # ensure that the definition is valid before validating against it
-        assert self.column_count is not None  # nosec   needed for mypy
-        assert self.row_count is not None  # nosec   needed for mypy
+        if self.column_count is None:
+            raise NotImplementedError("'column_count' should never be None here")
+        if self.row_count is None:
+            raise NotImplementedError("'row_count' should never be None here")
 
         raise_error = False
         if test_column >= self.column_count:
@@ -143,7 +131,8 @@ class LabwareDefinition(DomainModelWithUuid):
         column_str = "%s" % (column + 1)
         if pad_zeros:
             self.validate_row_and_column_counts()
-            assert self.column_count is not None  # nosec  needed for mypy
+            if self.column_count is None:
+                raise NotImplementedError("'column_count' should never be None here")
             if self.column_count > 10:
                 column_str = column_str.zfill(2)
         return column_str
@@ -172,8 +161,10 @@ class LabwareDefinition(DomainModelWithUuid):
             row index (zero-based), column index (zero-based)
         """
         self.validate_row_and_column_counts()
-        assert self.column_count is not None  # nosec  needed for mypy
-        assert self.row_count is not None  # nosec  needed for mypy
+        if self.column_count is None:
+            raise NotImplementedError("'column_count' should never be None here")
+        if self.row_count is None:
+            raise NotImplementedError("'row_count' should never be None here")
 
         row_idx = well_idx % self.row_count
         col_idx = math.floor(well_idx / self.row_count)
@@ -197,7 +188,10 @@ class LabwareDefinition(DomainModelWithUuid):
     def __eq__(self, other: object) -> bool:
         if self.__class__ != other.__class__:
             return False
-        assert isinstance(other, LabwareDefinition)  # nosec   needed for mypy
+        if not isinstance(other, LabwareDefinition):
+            raise NotImplementedError(
+                "'other' object should always be of type LabwareDefinition here."
+            )
 
         if self.column_count != other.column_count:
             return False
@@ -243,7 +237,6 @@ class LabwareDefinition(DomainModelWithUuid):
         x_coord, y_coord = self.center_of_a1
         if row_idx > 0:
             if self.row_center_to_center_spacing is None:
-
                 raise WellCoordinatesRequireRowOffsetError()
             y_coord += self.row_center_to_center_spacing * row_idx
         if col_idx > 0:
