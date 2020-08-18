@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 """Exceptions related to labware."""
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .labware_definitions import LabwareDefinition
 
 
 class WellCoordinatesGenerationError(Exception):
@@ -30,7 +34,7 @@ class PositionInvalidForLabwareDefinitionError(Exception):
         self,
         checked_row: int,
         checked_column: int,
-        labware_definition: "LabwareDefinition",  # type: ignore # noqa: F821  # Tanner (8/18/20): mypy and flake8 both complain about LabwareDefinition not being defined here even though we put it in quotes
+        labware_definition: "LabwareDefinition",
     ) -> None:
         super().__init__()
         self.checked_column = checked_column
