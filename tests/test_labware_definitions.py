@@ -77,9 +77,9 @@ def test_LabwareDefinition_validate_position(
 
 
 def test_LabwareDefinition_super_is_called_during_init(mocker):
-    mocked_init = mocker.patch.object(DomainModel, "__init__")
+    spied_init = mocker.spy(DomainModel, "__init__")
     LabwareDefinition()
-    assert mocked_init.call_count == 1
+    assert spied_init.call_count == 1
 
 
 @pytest.mark.parametrize(

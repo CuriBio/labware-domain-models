@@ -45,7 +45,10 @@ class BarcodedSbsLabware(DomainModelWithUuid):
     def __eq__(self, other: object) -> bool:
         if self.__class__ != other.__class__:
             return False
-        assert isinstance(other, BarcodedSbsLabware)  # nosec   needed for mypy
+        if not isinstance(other, BarcodedSbsLabware):
+            raise NotImplementedError(
+                "'other' object should always be of type BarcodedSbsLabware here."
+            )
 
         if self.barcode != other.barcode:
             return False
