@@ -13,7 +13,7 @@ pytest==6.1.2
 pytest-cov==2.10.1
 pytest-randomly==3.4.1
 pylint==2.6.0
-pytest-pylint==0.17.0
+pytest-pylint==0.18.0
 zest.releaser[recommended]==6.22.1
 misc_test_utils==0.2
 
