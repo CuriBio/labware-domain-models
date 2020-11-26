@@ -8,7 +8,7 @@
 # install the current package in editable mode
 # pip install -e .
 
-pre-commit==2.9.0 # run 'pre-commit install' initially to install the git hooks
+pre-commit==2.9.2 # run 'pre-commit install' initially to install the git hooks
 pytest==6.1.2
 pytest-cov==2.10.1
 pytest-randomly==3.5.0
