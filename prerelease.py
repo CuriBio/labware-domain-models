@@ -18,7 +18,9 @@ PRERELEASE_COMMIT_MSG = "Preparing release %(new_version)s"
 # self.data that is not in this list.  Embarrassment-driven documentation!
 DATA = baserelease.DATA.copy()
 DATA.update(
-    {"today": "Date string used in history header",}
+    {
+        "today": "Date string used in history header",
+    }
 )
 
 

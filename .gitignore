@@ -2,6 +2,11 @@
 .idea/
 .~c9*
 
+# CI caches
+.npm_cache/
+.precommit_cache/
+.pipenv_cache/
+
 # Python
 *.py[cod]
 __pycache__/
@@ -21,6 +26,9 @@ docs/build
 .coverage
 tests/**/snapshots/*_actual.png
 tests/**/snapshots/*_diff.png
+
+dist/
+build/
 
 # test coverage
 tests/__coverage__
