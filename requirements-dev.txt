@@ -7,7 +7,7 @@
 
 # install the current package in editable mode
 # pip install -e .
-
+chardet==3.0.4 # Eli (12/14/20) special requirement to resolve conflict with requests package
 pre-commit==2.9.3 # run 'pre-commit install' initially to install the git hooks
 pytest==6.2.1
 pytest-cov==2.10.1
