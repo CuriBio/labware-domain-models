@@ -6,7 +6,7 @@ from setuptools import setup
 
 setup(
     name="labware_domain_models",
-    version="0.2",
+    version="0.3.0",
     description="Business logic domain models for labware definitions and barcoded labware/microplates with SBS footprints.",
     url="https://github.com/CuriBio/labware-domain-models",
     author="Curi Bio",
