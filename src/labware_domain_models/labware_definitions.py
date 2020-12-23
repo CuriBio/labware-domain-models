@@ -151,6 +151,25 @@ class LabwareDefinition(DomainModelWithUuid):
         column_str = self._get_formatted_column_string(column, pad_zeros)
         return "%s%s" % (row_char, column_str)
 
+    def get_well_index_from_row_and_column(
+        self,
+        row: int,
+        column: int,
+    ) -> int:
+        """Get well index.
+
+        Args:
+            row: zero-based
+            column: zero-based
+        """
+        self.validate_row_and_column_counts()
+        if self.column_count is None:
+            raise NotImplementedError("'column_count' should never be None here")
+        if self.row_count is None:
+            raise NotImplementedError("'row_count' should never be None here")
+
+        return row + (column * self.row_count)
+
     def get_row_and_column_from_well_index(self, well_idx: int) -> Tuple[int, int]:
         """Get well row and column (zero-based).
 
