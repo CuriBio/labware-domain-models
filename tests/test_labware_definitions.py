@@ -186,6 +186,54 @@ def test_LabwareDefinition__get_well_index_from_row_and_column(
 
 
 @pytest.mark.parametrize(
+    "labware_definition,test_well_name,expected,test_description",
+    [
+        (
+            LabwareDefinition(row_count=4, column_count=6),
+            "A1",
+            0,
+            "first well (index 0) in 24 well plate",
+        ),
+        (
+            LabwareDefinition(row_count=4, column_count=6),
+            "D6",
+            23,
+            "last well (index 23) in 24 well plate",
+        ),
+        (
+            LabwareDefinition(row_count=8, column_count=12),
+            "H12",
+            95,
+            "last well (index 95) in 96 well plate",
+        ),
+        (
+            LabwareDefinition(row_count=8, column_count=12),
+            "A01",
+            0,
+            "first well (index 0) in 96 well plate",
+        ),
+        (
+            LabwareDefinition(row_count=16, column_count=24),
+            "A24",
+            368,
+            "first row and last column (index 368) in 384 well",
+        ),
+        (
+            LabwareDefinition(row_count=3, column_count=4),
+            "C1",
+            2,
+            "last row and first column (index 2) in 12 well",
+        ),
+    ],
+)
+def test_LabwareDefinition__get_well_index_from_well_name(
+    labware_definition, test_well_name, expected, test_description
+):
+    actual = labware_definition.get_well_index_from_well_name(test_well_name)
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
     "test_well_name,expected_row,expected_column,test_description",
     [("A1", 0, 0, "first well"), ("A02", 0, 1, "A2 zero padded")],
 )

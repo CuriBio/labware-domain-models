@@ -156,11 +156,14 @@ class LabwareDefinition(DomainModelWithUuid):
         row: int,
         column: int,
     ) -> int:
-        """Get well index.
+        """Get well index given row and column.
 
         Args:
             row: zero-based
             column: zero-based
+
+        Returns:
+            well index (zero-based)
         """
         self.validate_row_and_column_counts()
         if self.column_count is None:
@@ -169,6 +172,21 @@ class LabwareDefinition(DomainModelWithUuid):
             raise NotImplementedError("'row_count' should never be None here")
 
         return row + (column * self.row_count)
+
+    def get_well_index_from_well_name(
+        self,
+        well_name: str,
+    ) -> int:
+        """Get well index given well name.
+
+        Args:
+            well_name: well name
+
+        Returns:
+            well index (zero-based)
+        """
+        row, column = get_row_and_column_from_well_name(well_name)
+        return self.get_well_index_from_row_and_column(row, column)
 
     def get_row_and_column_from_well_index(self, well_idx: int) -> Tuple[int, int]:
         """Get well row and column (zero-based).
