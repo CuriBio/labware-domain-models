@@ -1,0 +1,495 @@
+# Based on https://github.com/prettier/prettier/blob/master/.github/workflows/dev-test.yml
+name: Publish to PyPi
+
+on:
+  workflow_dispatch:
+    inputs:
+      randomlyseed:
+        description: 'Pytest Randomly Seed'
+        required: false
+        default: ''
+      publish_to_pypi:
+        description: 'Publish to PyPi'
+        required: false
+        default: '0'
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - "ubuntu-18.04"
+          - "ubuntu-20.04"
+          - "windows-2019"
+          - "macos-10.15"
+          - "macos-11.0"
+        python-version:
+            - 3.7
+            - 3.8
+            - 3.9
+        include:
+          # only enable coverage on the fastest job
+          - os: "ubuntu-20.04"
+            python-version: "3.8" # Eli (11/12/20): pylint doesn't yet support Python 3.9, so can't run pre-commit yet
+            IS_FASTEST_JOB: true
+
+    name: Test code before publishing in Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Display Python version
+        run: |
+          python -c "import sys; print(sys.version)"
+          python -m venv venv
+
+      - name: Extract version number # Adapted from: https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions
+        shell: bash
+        run: echo '##[set-output name=package-version;]$(echo $(python .github/workflows/extract_package_info.py package_version))'
+        id: extract_version
+
+      - name: Display extracted version number
+        shell: bash
+        run: |
+          echo "Version: ${{ steps.extract_version.outputs.package-version }}"
+
+      - name: Confirming tag not already present on remote (if publishing)
+        if: github.event.inputs.publish_to_pypi == '1' && matrix.IS_FASTEST_JOB == true
+        run: if [$(git ls-remote --tags origin | grep ${{ steps.extract_version.outputs.package-version }}) = '']; then echo Tag does not exist on remote; else echo Tag already exists on remote && exit 1; fi
+
+      - name: Cache Pre-commit hooks
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-pre-commit-hooks
+        if: matrix.IS_FASTEST_JOB == true
+        with:
+          path: ./.precommit_cache
+          key: ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ matrix.python-version }}-build-${{ env.cache-name }}-
+
+      - name: Extract branch name # Adapted from: https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          git branch -av
+          echo '##[set-output name=sha-of-main-branch;]$(echo $(git branch -av | grep remotes/origin/main | grep -oP "main\s+\K\w+"))'
+          echo '##[set-output name=sha-of-development-branch;]$(echo $(git branch -av | grep remotes/origin/development | grep -oP "development\s+\K\w+"))'
+          echo '##[set-output name=sha-of-current-branch;]$(echo $(git branch -av | grep "*" | grep -oP " \s+\K\w+"))'
+        id: extract_branch
+
+      - name: Display extracted branch information
+        if: runner.os == 'Linux'
+        run: |
+          echo "SHA of current branch: ${{ steps.extract_branch.outputs.sha-of-current-branch }}"
+          echo "SHA of main branch: ${{ steps.extract_branch.outputs.sha-of-main-branch }}"
+          echo "SHA of development branch: ${{ steps.extract_branch.outputs.sha-of-development-branch }}"
+
+      - name: Is this running on development branch?
+        if: runner.os == 'Linux'
+        run: if [ "${{ steps.extract_branch.outputs.sha-of-current-branch}}" = "${{ steps.extract_branch.outputs.sha-of-development-branch}}" ] ; then echo "Running on development branch."; else echo "Not running on development branch."; fi
+
+      - name: Is this running on main branch?
+        if: runner.os == 'Linux'
+        run: if [ "${{ steps.extract_branch.outputs.sha-of-current-branch}}" = "${{ steps.extract_branch.outputs.sha-of-main-branch}}" ] ; then echo "Running on main branch."; else echo "Not running on main branch."; fi
+
+      - name: Fail if attempting to publish from a branch other than main
+        if: runner.os == 'Linux' && github.event.inputs.publish_to_pypi == '1'
+        run: if [ "${{ steps.extract_branch.outputs.sha-of-current-branch}}" = "${{ steps.extract_branch.outputs.sha-of-main-branch}}" ] ; then echo "Running on main branch, can proceed to publish."; else exit 1; fi
+
+      - name: Activate virtual environment (Linux/MacOS)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: . venv/bin/activate
+
+      - name: Activate virtual environment (Windows)
+        if: runner.os == 'Windows'
+        run: venv\Scripts\Activate.ps1
+
+      - name: Display Pip Version and confirm environment empty
+        run: |
+          pip -V
+          pip freeze
+      - name: Install Dev Dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Install Main Package
+        run: pip install -e .
+      - name: Log full installed packages
+        run: pip freeze
+
+      - name: Run pre-commit hooks
+        if: matrix.IS_FASTEST_JOB == true
+        run: |
+          pre-commit install
+          pre-commit run -a
+
+      - name: Run Tests with randomly generated seed
+        if: github.event.inputs.randomlyseed == ''
+        run: pytest -xsvv --cov-report=xml --full-ci --include-slow-tests
+
+      - name: Run Tests with supplied pytest-randomly seed
+        if: github.event.inputs.randomlyseed != ''
+        run: pytest -xsvv --cov-report=xml --full-ci --include-slow-tests --randomly-seed=${{ github.event.inputs.randomlyseed }}
+
+      - name: Install docs requirements
+        # only check Sphinx docs build on the fastest job
+        if: matrix.IS_FASTEST_JOB == true
+        run: pip install -r docs/requirements.txt
+
+      - name: Confirm Sphinx Docs build correctly
+        # only check Sphinx docs build on the fastest job
+        if: matrix.IS_FASTEST_JOB == true
+        run: SPHINXOPTS="-W" make --directory=docs html # the -W flag treats warnings as errors to cause build failures
+
+      - name: Run prerelease to check packaging compatibilty
+        run: prerelease --no-input
+
+      - name: Build package for release
+        run: |
+          python setup.py sdist
+          python setup.py bdist_wheel
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist--${{ matrix.os }}--${{ matrix.python-version }}
+          path: dist/*
+
+
+  publish_to_test_pypi:
+    needs: [test]
+    strategy:
+      fail-fast: false
+      matrix: # if publishing pure python code, then disable all except one os and python version combination. But if publishing code that uses Cython then likely all combinations will be needed
+        os:
+          - "ubuntu-18.04"
+          - "ubuntu-20.04"
+          - "windows-2019"
+          - "macos-10.15"
+          - "macos-11.0"
+        python-version:
+            - 3.7
+            - 3.8
+            - 3.9
+    name: Publish to Test PyPI for Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Display Python version
+        run: |
+          python -c "import sys; print(sys.version)"
+          python -m venv venv
+
+      - name: Activate virtual environment (Linux/MacOS)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: . venv/bin/activate
+
+      - name: Activate virtual environment (Windows)
+        if: runner.os == 'Windows'
+        run: venv\Scripts\Activate.ps1
+
+      - name: Display Pip Version and confirm environment empty
+        run: |
+          pip -V
+          pip freeze
+      - name: Install Dev Dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Log full installed packages
+        run: pip freeze
+
+      - name: Download built dist folder from previous step
+        uses: actions/download-artifact@v2
+        with:
+          name: dist--${{ matrix.os }}--${{ matrix.python-version }}
+          path: dist
+
+      - name: Uploading to Test PyPI
+        if: github.event.inputs.publish_to_pypi == '1'
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+
+        run: twine upload --repository testpypi dist/*
+
+      - name: Sleep for 360 seconds to allow Test PyPI Index to update before proceeding to the next step
+        if: github.event.inputs.publish_to_pypi == '1'
+        uses: juliangruber/sleep-action@v1
+        with:
+          time: 360s
+
+  install_from_test_pypi:
+    needs: [publish_to_test_pypi]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - "ubuntu-18.04"
+          - "ubuntu-20.04"
+          - "windows-2019"
+          - "macos-10.15"
+          - "macos-11.0"
+        python-version:
+            - 3.7
+            - 3.8
+            - 3.9
+    name: Install from Test PyPI and run tests on Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Display Python version
+        run: |
+          python -c "import sys; print(sys.version)"
+          python -m venv venv
+
+      - name: Activate virtual environment (Linux/MacOS)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: . venv/bin/activate
+
+      - name: Activate virtual environment (Windows)
+        if: runner.os == 'Windows'
+        run: venv\Scripts\Activate.ps1
+
+      - name: Display Pip Version and confirm environment empty
+        run: |
+          pip -V
+          pip freeze
+
+      - name: Extract package info # Adapted from: https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions
+        shell: bash
+        run: |
+          echo '##[set-output name=package-name;]$(echo $(python .github/workflows/extract_package_info.py package_name))'
+          echo '##[set-output name=package-version;]$(echo $(python .github/workflows/extract_package_info.py package_version))'
+        id: extract_package_info
+
+      - name: Install Main Package From Test PyPI
+        if: github.event.inputs.publish_to_pypi == '1'
+        run: python .github/workflows/extract_package_info.py install_from_test_pypi
+
+      - name: Install Main Package From Local repo as test since not publishing to PyPI
+        if: github.event.inputs.publish_to_pypi != '1'
+        run: |
+          echo Extracted package name that would have been used when publishing: ${{ steps.extract_package_info.outputs.package-name }}
+          echo Extracted package version that would have been used when publishing: ${{ steps.extract_package_info.outputs.package-version }}
+          pip install -e .
+
+      - name: Confirm no import errors when opening package
+        run: python -c "import ${{ steps.extract_package_info.outputs.package-name }}"
+
+      - name: Install Dev Dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Log full installed packages
+        run: pip freeze
+
+      - name: Run Tests with randomly generated seed
+        if: github.event.inputs.randomlyseed == ''
+        run: pytest -xsvv --full-ci --include-slow-tests --cov-fail-under=0
+
+      - name: Run Tests with supplied pytest-randomly seed
+        if: github.event.inputs.randomlyseed != ''
+        run: pytest -xsvv --full-ci --include-slow-tests --randomly-seed=${{ github.event.inputs.randomlyseed }}--cov-fail-under=0
+
+  publish_to_pypi:
+    needs: [install_from_test_pypi]
+    strategy:
+      fail-fast: false
+      matrix: # if publishing pure python code, then disable all except one os and python version combination. But if publishing code that uses Cython then likely all combinations will be needed
+        os:
+          - "ubuntu-18.04"
+          - "ubuntu-20.04"
+          - "windows-2019"
+          - "macos-10.15"
+          - "macos-11.0"
+        python-version:
+            - 3.7
+            - 3.8
+            - 3.9
+    name: Publish to PyPI for Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Display Python version
+        run: |
+          python -c "import sys; print(sys.version)"
+          python -m venv venv
+
+      - name: Activate virtual environment (Linux/MacOS)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: . venv/bin/activate
+
+      - name: Activate virtual environment (Windows)
+        if: runner.os == 'Windows'
+        run: venv\Scripts\Activate.ps1
+
+      - name: Display Pip Version and confirm environment empty
+        run: |
+          pip -V
+          pip freeze
+      - name: Install Dev Dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Log full installed packages
+        run: pip freeze
+
+      - name: Download built dist folder from previous step
+        uses: actions/download-artifact@v2
+        with:
+          name: dist--${{ matrix.os }}--${{ matrix.python-version }}
+          path: dist
+
+      - name: Uploading to PyPi
+        if: github.event.inputs.publish_to_pypi == '1'
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+
+        run: twine upload dist/*
+
+      - name: Sleep for 360 seconds to allow PyPI Index to update before proceeding to the next step
+        if: github.event.inputs.publish_to_pypi == '1'
+        uses: juliangruber/sleep-action@v1
+        with:
+          time: 360s
+
+
+  install_from_pypi:
+    needs: [publish_to_pypi]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - "ubuntu-18.04"
+          - "ubuntu-20.04"
+          - "windows-2019"
+          - "macos-10.15"
+          - "macos-11.0"
+        python-version:
+            - 3.7
+            - 3.8
+            - 3.9
+    name: Test installation from PyPI for Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Display Python version
+        run: |
+          python -c "import sys; print(sys.version)"
+          python -m venv venv
+
+      - name: Activate virtual environment (Linux/MacOS)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: . venv/bin/activate
+
+      - name: Activate virtual environment (Windows)
+        if: runner.os == 'Windows'
+        run: venv\Scripts\Activate.ps1
+
+      - name: Display Pip Version and confirm environment empty
+        run: |
+          pip -V
+          pip freeze
+
+      - name: Extract package info # Adapted from: https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions
+        shell: bash
+        run: |
+          echo '##[set-output name=package-name;]$(echo $(python .github/workflows/extract_package_info.py package_name))'
+          echo '##[set-output name=package-version;]$(echo $(python .github/workflows/extract_package_info.py package_version))'
+        id: extract_package_info
+
+      - name: Install Main Package From PyPI
+        if: github.event.inputs.publish_to_pypi == '1'
+        run: python .github/workflows/extract_package_info.py install_from_pypi
+
+      - name: Install Main Package From Local repo as test since not publishing to PyPI
+        if: github.event.inputs.publish_to_pypi != '1'
+        run: |
+          echo Extracted package name that would have been used when publishing: ${{ steps.extract_package_info.outputs.package-name }}
+          echo Extracted package version that would have been used when publishing: ${{ steps.extract_package_info.outputs.package-version }}
+          pip install -e .
+
+      - name: Confirm no import errors when opening package
+        run: python -c "import ${{ steps.extract_package_info.outputs.package-name }}"
+
+      - name: Install Dev Dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Log full installed packages
+        run: pip freeze
+
+      - name: Run Tests with randomly generated seed
+        if: github.event.inputs.randomlyseed == ''
+        run: pytest -xsvv --full-ci --include-slow-tests --cov-fail-under=0
+
+      - name: Run Tests with supplied pytest-randomly seed
+        if: github.event.inputs.randomlyseed != ''
+        run: pytest -xsvv --full-ci --include-slow-tests --randomly-seed=${{ github.event.inputs.randomlyseed }} --cov-fail-under=0
+
+  create_tag:
+    needs: [install_from_pypi]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - "ubuntu-18.04"
+    name: Creating tag on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Extract version number # Adapted from: https://stackoverflow.com/questions/58033366/how-to-get-current-branch-within-github-actions
+        shell: bash
+        run: echo '##[set-output name=package-version;]$(echo $(grep -Po "(?<=    version=\")[0-9.]+" setup.py))'
+        id: extract_version
+
+      - name: Tagging commit
+        run: |
+          echo "About to tag with: ${{ steps.extract_version.outputs.package-version }}"
+          git tag "${{ steps.extract_version.outputs.package-version }}"
+
+      - name: Pushing Tag
+        if: github.event.inputs.publish_to_pypi == '1'
+        run: git push --tags
