@@ -9,7 +9,7 @@
 # pip install -e .
 chardet==3.0.4 # Eli (12/14/20) special requirement to resolve conflict with requests package
 pre-commit==2.9.3 # run 'pre-commit install' initially to install the git hooks
-pytest==6.2.1
+pytest==6.2.2
 pytest-cov==2.11.1
 pytest-randomly==3.5.0
 pylint==2.6.0
