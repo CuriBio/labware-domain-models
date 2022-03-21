@@ -66,7 +66,7 @@ jobs:
         run: if [$(git ls-remote --tags origin | grep ${{ steps.extract_version.outputs.package-version }}) = '']; then echo Tag does not exist on remote; else echo Tag already exists on remote && exit 1; fi
 
       - name: Cache Pre-commit hooks
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v3
         env:
           cache-name: cache-pre-commit-hooks
         if: matrix.IS_FASTEST_JOB == true
