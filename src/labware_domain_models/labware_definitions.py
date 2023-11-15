@@ -5,6 +5,8 @@ Includes things such as column and well coordinates as well as
 converting names.
 """
 import math
+import re
+import string
 from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
@@ -42,11 +44,29 @@ class WellCoordinate(NamedTuple):
     y: Union[float, int]  # pylint: disable=invalid-name
 
 
+def row_letters_to_index0(row: str) -> int:
+    result = 0
+    for char in row:
+        result = result * 26 + (ord(char) - 65 + 1)  # 65 is the ASCII code for 'A'
+    return result - 1
+
+
+def row_index0_to_letters(row_index: int) -> str:
+    row = ""
+    base = len(string.ascii_uppercase)
+    while row_index >= 0:
+        row = string.ascii_uppercase[row_index % base] + row
+        row_index = (row_index // base) - 1
+    return row
+
+
 def get_row_and_column_from_well_name(well_name: str) -> Tuple[int, int]:
-    row_char = well_name[0]
-    column = int(well_name[1:]) - 1
-    row = ord(row_char) - 65
-    return row, column
+    match = re.match("([A-Z]+)([0-9]+)", well_name)
+    if not match:
+        raise ValueError(f"Cannot parse well '{well_name}', expected 'A1', 'B2', etc.")
+
+    col = int(match.group(2))
+    return row_letters_to_index0(match.group(1)), col - 1
 
 
 class LabwareDefinition(DomainModelWithUuid):
@@ -147,7 +167,7 @@ class LabwareDefinition(DomainModelWithUuid):
             column: zero-based
             pad_zeros: if set to true, on dense plates (more than 9 columns), a leading zero will be added for any single digit numbers
         """
-        row_char = chr(65 + row)
+        row_char = row_index0_to_letters(row)
         column_str = self._get_formatted_column_string(column, pad_zeros)
         return "%s%s" % (row_char, column_str)
 

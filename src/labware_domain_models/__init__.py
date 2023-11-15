@@ -10,6 +10,8 @@ from .labware_definitions import CartesianVector
 from .labware_definitions import CoordinateSystem
 from .labware_definitions import get_row_and_column_from_well_name
 from .labware_definitions import LabwareDefinition
+from .labware_definitions import row_index0_to_letters
+from .labware_definitions import row_letters_to_index0
 from .labware_definitions import WellCoordinate
 
 __all__ = [
@@ -24,4 +26,6 @@ __all__ = [
     "CoordinateSystem",
     "CartesianVectorRequirePlateHeightError",
     "get_row_and_column_from_well_name",
+    "row_letters_to_index0",
+    "row_index0_to_letters",
 ]
