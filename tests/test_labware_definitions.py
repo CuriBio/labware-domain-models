@@ -11,12 +11,15 @@ from labware_domain_models import CoordinateSystem
 from labware_domain_models import get_row_and_column_from_well_name
 from labware_domain_models import LabwareDefinition
 from labware_domain_models import PositionInvalidForLabwareDefinitionError
+from labware_domain_models import row_index0_to_letters
+from labware_domain_models import row_letters_to_index0
 from labware_domain_models import WellCoordinate
 from labware_domain_models import WellCoordinatesRequireA1CenterError
 from labware_domain_models import WellCoordinatesRequireColumnOffsetError
 from labware_domain_models import WellCoordinatesRequireRowOffsetError
 from misc_test_utils import copy_dict_with_key_removed
 import pytest
+from pytest import param
 
 from .fixtures import GENERIC_LABWARE_DEFINITION_KWARGS
 from .fixtures import GENERIC_UUID
@@ -38,6 +41,36 @@ def test_LabwareDefinition_validate_row_and_column_counts__raises_error_if_colum
     m = LabwareDefinition(row_count=2, column_count="joe")
     with pytest.raises(ValidationCollectionCannotCoerceError):
         m.validate_row_and_column_counts()
+
+
+@pytest.mark.parametrize(
+    "row,expected_index0",
+    [
+        param("A", 0, id="A: first 0-index of any plate"),
+        param("Z", 25, id="Z: last single digit 0-index of any plate"),
+        param("AA", 26, id="AA: first double digit 0-index of any plate"),
+        param("AF", 31, id="AF: last double digit 0-index of 1536 row plate"),
+    ],
+)
+def test_row_letters_to_index0__handles_rows_with_one_or_more_letters(
+    row: str, expected_index0: int
+) -> None:
+    assert row_letters_to_index0(row) == expected_index0
+
+
+@pytest.mark.parametrize(
+    "index0,expected_row",
+    [
+        param(0, "A", id="A: first 0-index of any plate"),
+        param(25, "Z", id="Z: last single digit 0-index of any plate"),
+        param(26, "AA", id="AA: first double digit 0-index of any plate"),
+        param(31, "AF", id="AF: last double digit 0-index of 1536 row plate"),
+    ],
+)
+def test_row_index0_to_letters__handles_indices_producing_one_or_more_letters(
+    index0: int, expected_row: str
+) -> None:
+    assert row_index0_to_letters(index0) == expected_row
 
 
 @pytest.mark.parametrize(
@@ -124,6 +157,30 @@ def test_LabwareDefinition_super_is_called_during_init(mocker):
             True,
             "A1",
             "zero pad uses one digit in 12 well",
+        ),
+        (
+            LabwareDefinition(row_count=32, column_count=48),
+            0,
+            0,
+            True,
+            "A01",
+            "zero pad uses 2-digits in 1536 well",
+        ),
+        (
+            LabwareDefinition(row_count=32, column_count=48),
+            26,
+            47,
+            True,
+            "AA48",
+            "first index with 2-character row in 1536 well",
+        ),
+        (
+            LabwareDefinition(row_count=32, column_count=48),
+            31,
+            47,
+            True,
+            "AF48",
+            "last row index in 1536 well",
         ),
     ],
 )
@@ -231,6 +288,12 @@ def test_LabwareDefinition__get_well_index_from_well_name(
 ):
     actual = labware_definition.get_well_index_from_well_name(test_well_name)
     assert actual == expected
+
+
+def test_get_row_and_column_from_well_name__Given_invalid_well__Then_exception():
+    with pytest.raises(ValueError) as err:
+        get_row_and_column_from_well_name("not a well name")
+    assert "Cannot parse well" in str(err.value)
 
 
 @pytest.mark.parametrize(

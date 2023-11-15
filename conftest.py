@@ -9,6 +9,9 @@ from _pytest.python import Function
 import pytest
 
 sys.dont_write_bytecode = True
+sys.stdout = (
+    sys.stderr
+)  # allow printing of pytest output when running pytest-xdist https://stackoverflow.com/questions/27006884/pytest-xdist-without-capturing-output
 
 
 def pytest_addoption(parser: Parser) -> None:
