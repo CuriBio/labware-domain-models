@@ -290,6 +290,12 @@ def test_LabwareDefinition__get_well_index_from_well_name(
     assert actual == expected
 
 
+def test_get_row_and_column_from_well_name__Given_invalid_well__Then_exception():
+    with pytest.raises(ValueError) as err:
+        get_row_and_column_from_well_name("not a well name")
+    assert "Cannot parse well" in str(err.value)
+
+
 @pytest.mark.parametrize(
     "test_well_name,expected_row,expected_column,test_description",
     [("A1", 0, 0, "first well"), ("A02", 0, 1, "A2 zero padded")],
