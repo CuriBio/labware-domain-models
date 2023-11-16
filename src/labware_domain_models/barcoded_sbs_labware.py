@@ -59,6 +59,6 @@ class BarcodedSbsLabware(DomainModelWithUuid):
 
         return True
 
-    def __hash__(self) -> int:  # pylint: disable=useless-super-delegation
-        # pylint is wrong. you MUST define the __hash__ function in every class.
+    def __hash__(self) -> int:
+        # pylint is wrong, you MUST define the __hash__ function in every class.
         return int(super().__hash__())

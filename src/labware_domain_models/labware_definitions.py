@@ -148,7 +148,7 @@ class LabwareDefinition(DomainModelWithUuid):
             column: zero-based
             pad_zeros: if set to true, on dense plates (more than 9 columns), a leading zero will be added for any single digit numbers
         """
-        column_str = "%s" % (column + 1)
+        column_str = f"{column + 1}"
         if pad_zeros:
             self.validate_row_and_column_counts()
             if self.column_count is None:
@@ -169,7 +169,7 @@ class LabwareDefinition(DomainModelWithUuid):
         """
         row_char = row_index0_to_letters(row)
         column_str = self._get_formatted_column_string(column, pad_zeros)
-        return "%s%s" % (row_char, column_str)
+        return f"{row_char}{column_str}"
 
     def get_well_index_from_row_and_column(
         self,
@@ -273,7 +273,7 @@ class LabwareDefinition(DomainModelWithUuid):
             return False
         return True
 
-    def __hash__(self) -> int:  # pylint: disable=useless-super-delegation
+    def __hash__(self) -> int:
         # pylint is wrong. you MUST define the __hash__ function in every class.
         return int(super().__hash__())
 
