@@ -19,19 +19,17 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - "ubuntu-18.04"
-          - "ubuntu-20.04"
-          - "windows-2019"
-          - "macos-10.15"
-          # - "macos-11.0"
+          - "ubuntu-latest"
+          - "windows-latest"
+          - "macos-latest"
         python-version:
             - 3.7
             - 3.8
             - 3.9
         include:
           # only enable coverage on the fastest job
-          - os: "ubuntu-20.04"
-            python-version: "3.8" # Eli (11/12/20): pylint doesn't yet support Python 3.9, so can't run pre-commit yet
+          - os: "ubuntu-latest"
+            python-version: "3.9"
             IS_FASTEST_JOB: true
 
     name: Test code before publishing in Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -170,7 +168,7 @@ jobs:
       fail-fast: false
       matrix: # if publishing pure python code, then disable all except one os and python version combination. But if publishing code that uses Cython then likely all combinations will be needed
         os:
-          - "ubuntu-20.04"
+          - "ubuntu-latest"
         python-version:
             - 3.9
     name: Publish to Test PyPI for Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -234,11 +232,9 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - "ubuntu-18.04"
-          - "ubuntu-20.04"
-          - "windows-2019"
-          - "macos-10.15"
-          # - "macos-11.0"
+          - "ubuntu-latest"
+          - "windows-latest"
+          - "macos-latest"
         python-version:
             - 3.7
             - 3.8
@@ -314,7 +310,7 @@ jobs:
       fail-fast: false
       matrix: # if publishing pure python code, then disable all except one os and python version combination. But if publishing code that uses Cython then likely all combinations will be needed
         os:
-          - "ubuntu-20.04"
+          - "ubuntu-latest"
         python-version:
             - 3.9
     name: Publish to PyPI for Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -379,11 +375,9 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - "ubuntu-18.04"
-          - "ubuntu-20.04"
-          - "windows-2019"
-          - "macos-10.15"
-          # - "macos-11.0"
+          - "ubuntu-latest"
+          - "windows-latest"
+          - "macos-latest"
         python-version:
             - 3.7
             - 3.8
@@ -459,7 +453,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - "ubuntu-20.04"
+          - "ubuntu-latest"
     name: Creating tag on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:

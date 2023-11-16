@@ -566,7 +566,7 @@ def test_LabwareDefinition__get_xy_coordinates_of_well(
     test_description,
 ):
     labware_definition = LabwareDefinition(**labware_definition_kwargs)
-    kwargs: Dict[str, Any] = dict()
+    kwargs: Dict[str, Any] = {}
     if x_offset is not None:
         kwargs["x_offset"] = x_offset
     if y_offset is not None:

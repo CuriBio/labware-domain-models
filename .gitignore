@@ -1,4 +1,5 @@
 # IDE
+.vscode/
 .idea/
 .~c9*
 
@@ -12,8 +13,8 @@
 __pycache__/
 
 # Venv
-.venv/
-venv/
+.venv*/
+venv*/
 *.egg-info
 
 

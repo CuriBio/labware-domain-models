@@ -15,7 +15,6 @@ class WellCoordinatesRequireA1CenterError(WellCoordinatesGenerationError):
 
 
 class WellCoordinatesRequireRowOffsetError(WellCoordinatesGenerationError):
-
     pass
 
 

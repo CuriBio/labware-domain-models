@@ -59,10 +59,10 @@ class Prereleaser(baserelease.Basereleaser):
         self._grab_history()
         if self.data["update_history"]:
             # Print changelog for this release.
-            print(
-                "Changelog entries for version {0}:\n".format(self.data["new_version"])
+            print(  # allow-print
+                f"Changelog entries for version {self.data['new_version']}:\n"
             )
-            print(self.data.get("history_last_release"))
+            print(self.data.get("history_last_release"))  # allow-print
         # Grab and set new version.
         self._grab_version()
         if self.data["update_history"]:
