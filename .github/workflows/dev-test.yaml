@@ -8,12 +8,6 @@ on:
         description: 'Pytest Randomly Seed'
         required: false
         default: ''
-  schedule:
-    - cron: '0 5 * * *'
-  push:
-    branches:
-      - main
-      - development
   pull_request:
 
 jobs:
@@ -26,8 +20,6 @@ jobs:
           - "windows-latest"
           - "macos-latest"
         python-version:
-            - 3.7
-            - 3.8
             - 3.9
         include:
           # only enable coverage on the fastest job
