@@ -101,7 +101,7 @@ jobs:
 
       - name: Archive Pytest Code Coverage if failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pytest-coverage-report--${{ matrix.os }}--${{ matrix.python-version }}
           path: "coverage-report-pytest/**/*"
